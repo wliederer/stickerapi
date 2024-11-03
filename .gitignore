@@ -35,3 +35,6 @@ build/
 application.properties
 application.yml
 env.txt
+Dockerfile
+docker-compose.yml
+sticker.tar
