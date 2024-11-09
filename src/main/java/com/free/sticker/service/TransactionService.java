@@ -5,6 +5,7 @@ import com.free.sticker.repository.AddressRepository;
 import com.free.sticker.repository.CustomerRepository;
 import com.free.sticker.repository.ProductRepository;
 import com.free.sticker.repository.TransactionRepository;
+import com.free.sticker.utils.TransactionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -92,6 +94,32 @@ public class TransactionService {
         // Retrieve Product by ID
         Product product = productRepository.findById(transactionDTO.getProductId())
                 .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + transactionDTO.getProductId()));
+        // Use a final variable for eventId
+        final Long addressId = address.getId();
+        //check if already has transaction
+        List<Transaction> transactions = transactionRepository.findAll();
+        boolean existingTransaction = transactions.stream()
+                .anyMatch(t -> t.getProduct().getEvent().getId().equals(product.getEvent().getId())
+                        && t.getAddress().getId().equals(addressId));
+
+        if (existingTransaction) {
+            throw new TransactionException("A transaction already exists for this address and event.");
+        }
+        //check inventory
+        List<Product> products = productRepository.findAll();
+        List<Product> eventProducts = products.stream()
+                .filter(p -> p.getEvent().getId().equals(product.getEvent().getId())).toList();
+        int productCount = eventProducts.size();
+        Set<Long> eventProductIds = eventProducts.stream()
+                .map(Product::getId)
+                .collect(Collectors.toSet());
+        List<Transaction> eventTransactions = transactions.stream()
+                .filter(t -> eventProductIds.contains(t.getProduct().getId()))
+                .toList();
+        int transactionCount = eventTransactions.size();
+        if(transactionCount >= productCount) {
+            throw new TransactionException("Out of ceramics!");
+        }
 
         // Create and save Transaction
         Transaction transaction = new Transaction();
@@ -137,5 +165,19 @@ public class TransactionService {
 
     public List<TransactionDTO> mapToDTOList(List<Transaction> transactions) {
         return transactions.stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    public TransactionPublicDTO mapToPublicDTO(Transaction transaction) {
+        TransactionPublicDTO publicDTO = new TransactionPublicDTO();
+        publicDTO.setId(transaction.getId());
+        publicDTO.setProductId(transaction.getProduct() != null ? transaction.getProduct().getId() : null);
+        publicDTO.setTransactionDate(transaction.getTransactionDate());
+        // Add other non-sensitive fields as needed
+
+        return publicDTO;
+    }
+
+    public List<TransactionPublicDTO> mapToPublicDTOList(List<Transaction> transactions) {
+        return transactions.stream().map(this::mapToPublicDTO).collect(Collectors.toList());
     }
 }

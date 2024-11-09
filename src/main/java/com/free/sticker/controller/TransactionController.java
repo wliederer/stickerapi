@@ -2,6 +2,7 @@ package com.free.sticker.controller;
 
 import com.free.sticker.models.Transaction;
 import com.free.sticker.models.TransactionDTO;
+import com.free.sticker.models.TransactionPublicDTO;
 import com.free.sticker.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,12 @@ public class TransactionController {
     public ResponseEntity<List<TransactionDTO>> getAllTransactions() {
         List<TransactionDTO> transactions = transactionService.mapToDTOList(transactionService.getAllTransactions());
         return new ResponseEntity<>(transactions, HttpStatus.OK);
+    }
+
+    @GetMapping("/public")
+    public ResponseEntity<List<TransactionPublicDTO>> getAllPublicTransactions() {
+        List<TransactionPublicDTO> publicTransactions = transactionService.mapToPublicDTOList(transactionService.getAllTransactions());
+        return new ResponseEntity<>(publicTransactions, HttpStatus.OK);
     }
 
     @PostMapping
